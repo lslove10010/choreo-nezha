@@ -1,36 +1,27 @@
 # 哪吒监控面板配置
-# 官方仓库: https://github.com/nezhahq/nezha
+# 变量通过环境变量替换
 
-# 站点设置
 site_url: "${SITE_URL}"
-
-# 监听端口 - 默认 8008
 listen_port: 8008
 listen_host: "0.0.0.0"
 
-# 语言与时区
 language: "zh-CN"
 location: "Asia/Shanghai"
 
-# 数据库配置
 database_dialect: "postgres"
 database_url: "${DATABASE_URL}"
 
-# 禁用 gRPC，使用 WebSocket（兼容 Cloudflare Tunnel）
 grpc_port: 0
 enable_websocket: true
 
-# 站点信息
 site_name: "哪吒监控"
 site_logo: ""
 user_template: "default"
 
-# 性能优化
 enable_plain_ip_in_notification: false
 disable_cdn_download: true
 disable_auto_update: true
 
-# OAuth2 - 微软
 oauth2:
   provider: "microsoft"
   client_id: "${MS_CLIENT_ID}"
@@ -39,5 +30,4 @@ oauth2:
   admin_users:
     - "${OAUTH_ADMIN}"
 
-# 禁用 TLS（Cloudflare 处理）
 tls: false
