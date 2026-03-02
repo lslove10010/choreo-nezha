@@ -2,6 +2,6 @@ version: 0.1
 
 endpoints:
   - name: nezha-dashboard
-    port: 8008  # 修正为 8008
+    port: 8008
     type: REST
     networkVisibility: Project
