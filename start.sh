@@ -2,40 +2,32 @@
 set -e
 
 echo "=== Nezha Dashboard on Choreo ==="
-echo "Port: 8008 (default)"
 
 # 检查环境变量
-check_env() {
-    if [ -z "$1" ]; then
-        echo "Error: $2 is not set"
+for var in TUNNEL_TOKEN SITE_URL DATABASE_URL MS_CLIENT_ID MS_CLIENT_SECRET OAUTH_ADMIN; do
+    eval "val=\$$var"
+    if [ -z "$val" ]; then
+        echo "Error: $var is not set"
         exit 1
     fi
-}
+done
 
-check_env "$TUNNEL_TOKEN" "TUNNEL_TOKEN"
-check_env "$SITE_URL" "SITE_URL"
-check_env "$DATABASE_URL" "DATABASE_URL"
-check_env "$MS_CLIENT_ID" "MS_CLIENT_ID"
-check_env "$MS_CLIENT_SECRET" "MS_CLIENT_SECRET"
-check_env "$OAUTH_ADMIN" "OAUTH_ADMIN"
-
-# 转换数据库 URL 格式
-case "$DATABASE_URL" in
-    postgresql://*)
-        DATABASE_URL="postgres${DATABASE_URL#postgresql}"
-        ;;
+# 转换数据库 URL（postgresql:// -> postgres://）
+DB_URL="$DATABASE_URL"
+case "$DB_URL" in
+    postgresql://*) DB_URL="postgres${DB_URL#postgresql}" ;;
 esac
 
 # 添加 sslmode
-if ! echo "$DATABASE_URL" | grep -q "sslmode="; then
-    if echo "$DATABASE_URL" | grep -q "?"; then
-        DATABASE_URL="${DATABASE_URL}&sslmode=require"
+if ! echo "$DB_URL" | grep -q "sslmode="; then
+    if echo "$DB_URL" | grep -q "?"; then
+        DB_URL="${DB_URL}&sslmode=require"
     else
-        DATABASE_URL="${DATABASE_URL}?sslmode=require"
+        DB_URL="${DB_URL}?sslmode=require"
     fi
 fi
 
-export DATABASE_URL
+export DATABASE_URL="$DB_URL"
 
 echo "Waiting for database..."
 until pg_isready -d "$DATABASE_URL" 2>/dev/null; do
@@ -44,8 +36,17 @@ done
 echo "Database connected"
 
 # 生成配置文件
-envsubst < /data/config.yaml.template > /data/config.yaml
+envsubst < /data/config.yaml.template > /tmp/config.yaml
 
 echo "Starting Nezha Dashboard on port 8008..."
 
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+# 启动哪吒面板（后台）
+/dashboard/nezha-dashboard --config /tmp/config.yaml &
+
+# 等待面板启动
+sleep 5
+
+echo "Starting Cloudflare Tunnel..."
+
+# 启动 cloudflared（前台保持容器运行）
+exec /usr/local/bin/cloudflared tunnel run --no-autoupdate --token "$TUNNEL_TOKEN"
